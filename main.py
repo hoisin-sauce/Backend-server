@@ -75,11 +75,9 @@ def like_interaction(token, film_name):
 def like(token, film_name):
   film_id = film_exists(film_name)
   user_id = token_exists(token)
-  print(user_id)
   rows = like_db.get_data()
-  print(rows)
   row = f"{film_id},{rows[user_id]}"
-  like_db
+  like_db.replace_line(user_id, row)
   return "yay"
 
 def change_pw_verification(name, old_pw, new_pw, new_salt=True, json=True):
@@ -213,7 +211,7 @@ def user_exists(name):
 def film_liked(token, name):
   row = token_exists(token)
   data = like_db.get_data()[row].split(",")
-  return film_exists(name) in data
+  return str(film_exists(name)) in data
 
 # returns row of token or -1
 def token_exists(token):
