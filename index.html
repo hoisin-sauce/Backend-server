@@ -1,0 +1,76 @@
+<head>
+  <title>Welcome to the internet</title>
+  <style>
+    .tile{
+	background-color:#ABCDEF;
+	width: 50px;
+	height: 50px;
+	position: absolute;
+	border-radius: 100px;
+}
+
+.yellow{
+	background-color:#E0E800;
+}
+
+.green{
+	background-color:#07B313;
+}
+
+.red{
+	background-color:#FF0000;
+}
+
+.blue{
+	background-color:#1010FF;
+}
+  </style>
+</head>
+<body>
+  <div id="stage">
+  </div>
+  <script>
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+    
+function getRandomInt(max) {
+  return Math.floor(Math.random() * max);
+}
+    
+function displayLevel(){
+	console.log("RAN");
+  var rows = Math.floor(window.screen.height/50)-3;
+  var cols = Math.floor(window.screen.width/50);
+	var stage = document.getElementById("stage");
+	for (var row = 0; row < rows; row++){
+		for (var column = 0; column < cols; column++){
+			box = document.createElement('div');
+			box.style.top = row*50+"px";
+			box.style.left = column*50+"px";
+			switch (getRandomInt(4)){
+				case 0:
+					box.classList.add("green");
+					break;
+				case 1:
+					box.classList.add("yellow");
+					break;
+				case 2:
+					box.classList.add("red");
+					break;
+				case 3:
+					box.classList.add("blue");
+					break;
+				default:
+					box.classList.add("blue");
+			}
+			box.classList.add("tile");
+			stage.appendChild(box);
+		}
+	}
+}
+
+displayLevel();
+
+  </script>
+</body>

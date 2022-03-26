@@ -1,0 +1,62 @@
+<head>
+  <title>API Documentation</title>
+  <style>
+    body{
+      font-family: Arial, Helvetica, sans-serif;
+      background-color:#93C48B;
+    }
+
+    h1{
+      background-color:#D0E562;
+      margin: 0 5%;
+    }
+    
+    .request{
+      
+      margin: 1% 5%;
+    }
+
+    .text{
+      background-color:#B6D369;
+    }
+    
+  </style>
+</head>
+<body>
+  <h1>Badflix api documentation</h1>
+  <div class="request">
+    <h3>Registering users</h3>
+    <div class="text">
+    Users can be registered through the subdomain /api/register/username/password/genres/birthdate<br/>
+    This get request returns a token, or in the case of a user already being registered, it will respond with the string "null", this is because our client dev cannot do anything competently.<br/>The birthdate must be entered in the form dd,mm,yyyy
+    </div>
+  </div>
+  <div class="request">
+    <h3>Reseting tokens</h3>
+    <div class="text">
+    Users can be registered through the subdomain /api/token/username/password<br/>
+    This get request returns a token, or in the case of a set of invalid login details being passed, it will respond with the string "null", this is because our client dev cannot do anything competently.
+    </div>
+  </div>
+  <div class="request">
+    <h3>Requesting films (token)</h3>
+    <div class="text">
+    Users can be registered through the subdomain /api/films/token/{token}<br/>
+    The token of the user should be used in place of {token}<br/>
+      The request will return a list of youtube links seperated by commas
+    </div>
+  </div>
+  <div class="request">
+    <h3>Posting likes</h3>
+    <div class="text">
+    Users can be registered through the subdomain /api/like/{token}/{film_name}<br/>
+    The token of the user should be used in place of {token}<br/>
+    The name of the film should be used in place of {film_name}<br/>
+    The request will return yay if it runs without error
+    </div>
+  </div>
+  <div class="github">
+    <h2><a href="https://github.com/ItzJakeBoiz/Netflix" >Github Link</a></h2>
+  </div>
+  /api/like/<string:token>/<string:film_name>/
+</body>
