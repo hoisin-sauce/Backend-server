@@ -41,15 +41,6 @@ def api_lookup():
   with open("api.html", "r") as file:
     homepage = file.read()
     return homepage
-
-# dll downloads for app
-@app.route('/download/1')
-def file_downloads():
-  return send_file(os.path.dirname(os.path.realpath(__file__))+"/DLL/AxInterop.WMPLib.dll")
-  
-@app.route('/download/2')
-def file_download():
-  return send_file(os.path.dirname(os.path.realpath(__file__))+"/DLL/Interop.WMPLib.dll")
   
 # re-verify token
 @app.route('/api/token/<string:user>/<string:pw>', methods=['GET'])
