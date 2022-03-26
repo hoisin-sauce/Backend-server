@@ -68,14 +68,19 @@ def register_interation(user, pw, genres, birthdate):
 
 @app.route('/api/like/<string:token>/<string:film_name>/', methods=['GET'])
 def like_interaction(token, film_name):
-  film_id = film_exists(film_name)
-  user_id = token_exists(token)
-  row = like_db.get_data()[user_id]
-  row = f"{film_id},{row}"
-  return "yay"
-  
+  return like(token, film_name)
 
 # generic functions
+
+def like(token, film_name):
+  film_id = film_exists(film_name)
+  user_id = token_exists(token)
+  print(user_id)
+  rows = like_db.get_data()
+  print(rows)
+  row = f"{film_id},{rows[user_id]}"
+  like_db
+  return "yay"
 
 def change_pw_verification(name, old_pw, new_pw, new_salt=True, json=True):
   user = user_exists(name)
@@ -133,7 +138,7 @@ def register(user, pw, genres, birthdate, json=True):
   user_data_db.append(f"{user},{genres},{birthdate}")
   token = generate_token()
   token_db.append(token)
-  like_db.append("")
+  like_db.append(",")
 
   # return token data
   if json:
@@ -255,16 +260,14 @@ def get_films(token, filters=None, exclusions=None, json=True):
       
       return_data.append( {"name":film.name, "link": film.link.split("\n")[0], "genre":film.genre, "liked":film_liked(token, film.name)})
 
-    # output = str(return_data)[1:-1].replace("'", "")
-
     output = str(return_data)
 
   return output
            
 def console_interface():
   while True:
-    try:
-    #if True:
+    #try:
+    if True:
       n = input(">>>")
       split_n = n.split(" ")
       if split_n[0] == "clear":
@@ -312,9 +315,15 @@ def console_interface():
         else:
           for val in split_n[1:]:
             print(db_lookup[val].get_data_bytes())
+
+      elif split_n[0] == "liked":
+        print(film_liked(split_n[1], split_n[2]))
+
+      elif split_n[0] == "like":
+        print(like(split_n[1], split_n[2]))
         
-    except Exception:
-      print('incorrect arguments')
+    #except Exception:
+    #  print('incorrect arguments')
 
 # main program
 
