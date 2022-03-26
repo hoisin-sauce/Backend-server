@@ -40,7 +40,7 @@ def home():
 def api_lookup():
   with open("api.html", "r") as file:
     homepage = file.read()
-    return homepage#
+    return homepage
 
 # dll downloads for app
 @app.route('/download/1')
@@ -76,9 +76,17 @@ def like(token, film_name):
   film_id = film_exists(film_name)
   user_id = token_exists(token)
   rows = like_db.get_data()
-  row = f"{film_id},{rows[user_id]}"
-  like_db.replace_line(user_id, row)
-  return "yay"
+  output = "success"
+  try:
+    if film_liked(token, film_name):
+      row = ",".join([i for i in rows[user_id].split(",") if i != str(film_id)]).replace("\n", "")
+    else:
+      row = f"{film_id},{rows[user_id]}"
+    like_db.replace_line(user_id, row)
+  except Exception:
+    output = "failed"
+    
+  return output
 
 def change_pw_verification(name, old_pw, new_pw, new_salt=True, json=True):
   user = user_exists(name)
@@ -108,8 +116,6 @@ def change_pw(name, new_pw, new_salt=True):
   password_db.replace_line(user, hashed_pw)
   output = update_token(name, new_pw)
   return output
-
-#def
 
 def films(token):
   row = token_exists(token)
@@ -256,7 +262,7 @@ def get_films(token, filters=None, exclusions=None, json=True):
 
     for film in output:
       
-      return_data.append( {"name":film.name, "link": film.link.split("\n")[0], "genre":film.genre, "liked":film_liked(token, film.name)})
+      return_data.append( {"name":film.name, "link": film.link.split("\n")[0], "genre":film.genre, "liked":str(film_liked(token, film.name)).lower()})
 
     output = str(return_data)
 
