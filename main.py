@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, send_file #https://backend-server.18jchadwick.repl.co/
+from flask import Flask, jsonify #https://backend-server.18jchadwick.repl.co/
 from threading import Thread
 import filehandler
 import datahandler
@@ -23,6 +23,11 @@ like_db = filehandler.File("likes.csv")
 salt_db = filehandler.File("salts.csv")
 
 db_lookup = {"film":film_db, "user":user_data_db, "pw":password_db, "token": token_db, "like":like_db, "salt":salt_db}
+
+film_genres = ("Drama","Action","Comedy","Horror","Science Fiction","Romance")
+genre_count = len(film_genres)
+
+film_returns_count = 25
 
 homepage = ""
 
@@ -50,12 +55,12 @@ def token_interation(user, pw):
 # get films from token
 @app.route('/api/films/token/<string:token>', methods=['GET'])
 def films_interation(token):
-  return films(token)
+  return generate_film_suggestions(token)
 
 # register user
-@app.route('/api/register/<string:user>/<string:pw>/<string:genres>/<string:birthdate>', methods=['GET'])
-def register_interation(user, pw, genres, birthdate):
-  return register(user, pw, genres, birthdate)
+@app.route('/api/register/<string:user>/<string:pw>/<string:genres>/<string:birthdate>/<string:email>', methods=['GET'])
+def register_interation(user, pw, genres, birthdate, email):
+  return register(user, pw, genres, birthdate, email=email)
 
 @app.route('/api/like/<string:token>/<string:film_name>/', methods=['GET'])
 def like_interaction(token, film_name):
@@ -121,7 +126,7 @@ def films(token):
   # match films for genres
   return get_films(token, filters = [genres])
 
-def register(user, pw, genres, birthdate, json=True):
+def register(user, pw, genres, birthdate, json=True, email="examplemail@gmail.com"):
   # check if user already exists
   if user_exists(user) != -1:
     return "null"
@@ -130,7 +135,7 @@ def register(user, pw, genres, birthdate, json=True):
   salt = generate_salt()
   password_db.append(hash(pw, salt=salt))
   salt_db.append_bytes(salt)
-  user_data_db.append(f"{user},{genres},{birthdate}")
+  user_data_db.append(f"{user},{genres},{email},{birthdate}")
   token = generate_token()
   token_db.append(token)
   like_db.append(",")
@@ -258,11 +263,86 @@ def get_films(token, filters=None, exclusions=None, json=True):
     output = str(return_data)
 
   return output
+
+def generate_film_suggestions(token, json=True):
+  # get user id
+  id = token_exists(token)
+
+  if id == -1:
+    return "[]"
+  user_data = user_data_db.get_data()[id].split(",")
+  # get liked films to calculate weightings
+  liked_film_ids = [i for i in like_db.get_data()[id].split(",") if i != ""]
+  # get film data for efficiency
+  films = film_db.get_data()
+
+  genre_counts = [0]*genre_count
+
+  # caluclate proportions of fims
+  for id in liked_film_ids:
+    # get film genre
+    film_data = films[int(id)].split(",")
+    genre_counts[film_genres.index(film_data[1])] += 1
+
+  # weighting for user registration genre
+  genre_counts[film_genres.index(user_data[1])] += 10
+
+  # calculate actual film ammounts
+  liked_films_count = len(liked_film_ids) + 10
+
+  film_genre_counts = list()
+
+  for n in genre_counts:
+    normalised_genre_count = n/liked_films_count
+    film_genre_counts.append(int(normalised_genre_count * film_returns_count)-1)
+
+  return_films = list()
+  
+  zero_c = 0
+
+  for v in film_genre_counts:
+    if v <= 0:
+      zero_c += 1
+
+  i = 0
+  random.shuffle(films)
+  for film in films:
+    film = datahandler.Film(film)
+    film_genre_id = film_genres.index(film.genre)
+    if film_genre_counts[film_genre_id] > 0:
+      i += 1
+      film_genre_counts[film_genre_id] -= 1
+      return_films.append(film)
+      if not film_genre_counts[film_genre_id]:
+        zero_c += 1
+    elif len(return_films) == film_returns_count:
+      break
+    elif zero_c == 6:
+      return_films.append(film)
+
+  i = 0
+  while film_returns_count > len(return_films):
+    film = datahandler.Film(films[i])
+    if not film in return_films:
+      return_films.append(film)
+    i += 1
+    
+  output = return_films
+  if json:
+    return_data = list()
+
+    for film in output:
+      
+      return_data.append( {"name":film.name, "link": film.link.split("\n")[0], "genre":film.genre, "liked":str(film_liked(token, film.name)).lower()})
+      #return_data.append(film.genre)
+    output = str(return_data)
+
+  return output
            
 def console_interface():
   while True:
-    #try:
-    if True:
+    try:
+    #if True:
       n = input(">>>")
       split_n = n.split(" ")
       if split_n[0] == "clear":
@@ -316,9 +396,12 @@ def console_interface():
 
       elif split_n[0] == "like":
         print(like(split_n[1], split_n[2]))
+
+      elif split_n[0] == "generate":
+        print(generate_film_suggestions(split_n[1]))
         
-    #except Exception:
-    #  print('incorrect arguments')
+    except Exception:
+      print('incorrect arguments')
 
 # main program
 
