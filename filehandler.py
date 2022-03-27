@@ -29,10 +29,10 @@ class File:
       data = file.readlines()
     return data
 
-  def replace_line(self, line_num, text):
+  def replace_line(self, line_num, text, newl=True):
     with open(self.filename, 'r') as file:
       lines = file.readlines()
-      lines[line_num] = text + "\n" if  line_num + 1 < self.len else text
+      lines[line_num] = text + "\n" if  line_num + 1 < self.len and newl else text
       with open(self.filename, 'w') as out:
         out.writelines(lines)
 

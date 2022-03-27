@@ -1,10 +1,15 @@
-from flask import Flask, jsonify #https://backend-server.18jchadwick.repl.co/
+from flask import Flask, jsonify, redirect #https://backend-server.18jchadwick.repl.co/
 from threading import Thread
+from email.message import EmailMessage
 import filehandler
 import datahandler
 import random
 import hashlib
 import os
+import smtplib
+import threading
+EMAIL_ADDRESS = 'badflixproject@gmail.com'
+EMAIL_PASSWORD = 'THIS IS AN EXAMPLE PASSWORD'
 
 # define global variables
 token_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -27,15 +32,21 @@ db_lookup = {"film":film_db, "user":user_data_db, "pw":password_db, "token": tok
 film_genres = ("Drama","Action","Comedy","Horror","Science Fiction","Romance")
 genre_count = len(film_genres)
 
-film_returns_count = 25
+film_returns_count = 5
 
 homepage = ""
+
+with open("password_reset.html", "r") as file:
+    pw_reset_page = file.read()
+
+reset_urls = {}
 
 # server interactions
 
 # homepage
 @app.route('/')
 def home():
+  return redirect("/api", code=303)
   with open("index.html", "r") as file:
     homepage = file.read()
     return homepage
@@ -62,10 +73,64 @@ def films_interation(token):
 def register_interation(user, pw, genres, birthdate, email):
   return register(user, pw, genres, birthdate, email=email)
 
-@app.route('/api/like/<string:token>/<string:film_name>/', methods=['GET'])
+# toggle liking film
+@app.route('/api/like/<string:token>/<string:film_name>', methods=['GET'])
 def like_interaction(token, film_name):
-  return like(token, film_name)
+  thread = threading.Thread(target=like, args=(token, film_name,))
+  thread.start()
+  return "in progress"
 
+# reset password
+@app.route('/api/reset/<string:username>', methods=['GET'])
+def password_reset_interaction(username):
+  password_reset(username)
+  return "success"
+
+# reset password email link
+@app.route('/api/resetpassword/<string:id>', methods=['GET'])
+def email_pw_reset_interaction(id):
+  for k,v in reset_urls.items():
+    if k == id:
+      return redirect(f"https://backend-server.18jchadwick.repl.co/reset/{v}", code=303)
+
+# reset password webpage
+@app.route('/reset/<string:username>', methods=['GET'])
+def email_pw_page(username):
+  with open("reset_password_webpage.html", "r") as file:
+    homepage = file.read()
+    homepage.replace("USERNAME", username)
+    return homepage
+
+# reset password request
+@app.route('/api/reset/<string:user>/<string:new>/', methods=['GET'])
+def reset_pw(user, old, new):
+  return change_pw(user,new)
+    
+# email management
+
+def send_email(to, title, content):
+  msg = EmailMessage()
+  msg['Subject'] = title
+  msg['From'] = EMAIL_ADDRESS 
+  msg['To'] = to 
+  msg.set_content(content)
+
+
+  with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+    smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD) 
+    smtp.send_message(msg)
+
+def password_reset(username):
+  global reset_urls
+  id = user_exists(username)
+  user_data = user_data_db.get_data()[id].split(",")
+
+  url_end = generate_token()
+
+  send_email(user_data[2], f"PASSWORD RESET FOR {user_data[0].upper()}", pw_reset_page.replace("USERNAME", user_data[0].upper()).replace("ID", url_end))
+
+  reset_urls[url_end] = username
+  
 # generic functions
 
 def like(token, film_name):
@@ -76,8 +141,9 @@ def like(token, film_name):
   try:
     if film_liked(token, film_name):
       row = ",".join([i for i in rows[user_id].split(",") if i != str(film_id)]).replace("\n", "")
+      print(row)
     else:
-      row = f"{film_id},{rows[user_id]}"
+      row = f"{film_id},{rows[user_id]}".replace("\n", "")
     like_db.replace_line(user_id, row)
   except Exception:
     output = "failed"
@@ -272,7 +338,7 @@ def generate_film_suggestions(token, json=True):
     return "[]"
   user_data = user_data_db.get_data()[id].split(",")
   # get liked films to calculate weightings
-  liked_film_ids = [i for i in like_db.get_data()[id].split(",") if i != ""]
+  liked_film_ids = [i for i in like_db.get_data()[id].split(",") if isinstance(i, int)]
   # get film data for efficiency
   films = film_db.get_data()
 
