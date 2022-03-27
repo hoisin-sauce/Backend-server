@@ -46,7 +46,6 @@ reset_urls = {}
 # homepage
 @app.route('/')
 def home():
-  return redirect("/api", code=303)
   with open("index.html", "r") as file:
     homepage = file.read()
     return homepage
@@ -403,6 +402,7 @@ def generate_film_suggestions(token, json=True):
       #return_data.append(film.genre)
     output = str(return_data)
 
+  random.shuffle(output)
   return output
            
 def console_interface():
