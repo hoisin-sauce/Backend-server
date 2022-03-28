@@ -402,7 +402,7 @@ def generate_film_suggestions(token, json=True):
       #return_data.append(film.genre)
     output = str(return_data)
 
-  random.shuffle(output)
+  #random.shuffle(output)
   return output
            
 def console_interface():
