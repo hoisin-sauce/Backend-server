@@ -39,13 +39,16 @@ class File:
   def replace_line_bytes(self, line_num, text):
     with open(self.filename, 'rb') as file:
       lines = file.readlines()
-      lines[line_num] = text + b"\n" * line_num + 1 < self.len
+      lines[line_num] = text if line_num + 1 < self.len else text +  b"\n"
       with open(self.filename, 'wb') as out:
         out.writelines(lines)
 
   @property
   def len(self):
-    return len(self.get_data())
+    try:
+      return len(self.get_data())
+    except UnicodeDecodeError:
+      return len(self.get_data_bytes())
 
   def __enter__(self):
     return self

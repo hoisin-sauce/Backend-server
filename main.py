@@ -1,17 +1,18 @@
 from flask import Flask, jsonify, redirect #https://backend-server.18jchadwick.repl.co/
 from threading import Thread
-from email.message import EmailMessage
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 import filehandler
 import datahandler
 import random
 import hashlib
 import os
-import smtplib
 import threading
-EMAIL_ADDRESS = 'badflixproject@gmail.com'
-EMAIL_PASSWORD = 'THIS IS AN EXAMPLE PASSWORD'
 
 # define global variables
+EMAIL_ADDRESS = 'noreply@susbean.monster'
+EMAIL_APIKEY = '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'
+
 token_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 token_chars_len = len(token_chars)-1
 token_len = 32
@@ -19,6 +20,8 @@ salt_len = 64
 basic_salt = "\x83f^\xfb\xba\x86\xa7\xbcC\x1c\x11\x872\xa3\x83;\xa6\xf1\xdd\xac\x0b\x9b\xab\x1e\xe5\xf5@4Y4vx"
 
 app = Flask('')
+
+sg = SendGridAPIClient(os.environ.get(EMAIL_APIKEY))
 
 password_db = filehandler.File("pw.csv")
 token_db = filehandler.File("token.csv")
@@ -36,7 +39,7 @@ film_returns_count = 5
 
 homepage = ""
 
-with open("password_reset.html", "r") as file:
+with open("reset_password_email.html", "r") as file:
     pw_reset_page = file.read()
 
 reset_urls = {}
@@ -88,36 +91,31 @@ def password_reset_interaction(username):
 # reset password email link
 @app.route('/api/resetpassword/<string:id>', methods=['GET'])
 def email_pw_reset_interaction(id):
-  for k,v in reset_urls.items():
-    if k == id:
-      return redirect(f"https://backend-server.18jchadwick.repl.co/reset/{v}", code=303)
-
-# reset password webpage
-@app.route('/reset/<string:username>', methods=['GET'])
-def email_pw_page(username):
   with open("reset_password_webpage.html", "r") as file:
     homepage = file.read()
-    homepage.replace("USERNAME", username)
+    homepage.replace("USERNAME", id)
     return homepage
 
 # reset password request
-@app.route('/api/reset/<string:user>/<string:new>/', methods=['GET'])
-def reset_pw(user, old, new):
-  return change_pw(user,new)
-    
+@app.route('/api/resetpass/<string:user>/<string:new>/', methods=['GET'])
+def reset_pw(user, new):
+  for k,v in reset_urls.items():
+    if k == user:
+      change_pw(v,new)
+      del reset_urls[k]
+      return "Successfully reset your password"
+  return "Invalid reset token"
+
 # email management
 
 def send_email(to, title, content):
-  msg = EmailMessage()
-  msg['Subject'] = title
-  msg['From'] = EMAIL_ADDRESS 
-  msg['To'] = to 
-  msg.set_content(content)
+  msg = Mail(
+    from_email=EMAIL_ADDRESS,
+    to_emails=to,
+    subject='Your reset password link',
+    html_content=content)
+  response = sg.send(msg)
 
-
-  with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-    smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD) 
-    smtp.send_message(msg)
 
 def password_reset(username):
   global reset_urls
@@ -126,7 +124,8 @@ def password_reset(username):
 
   url_end = generate_token()
 
-  send_email(user_data[2], f"PASSWORD RESET FOR {user_data[0].upper()}", pw_reset_page.replace("USERNAME", user_data[0].upper()).replace("ID", url_end))
+
+  send_email(user_data[2], f"<strong>PASSWORD RESET FOR {user_data[0].upper()}</strong>", pw_reset_page.replace("USERNAME", user_data[0].upper()).replace("ID", url_end))
 
   reset_urls[url_end] = username
   
@@ -140,7 +139,6 @@ def like(token, film_name):
   try:
     if film_liked(token, film_name):
       row = ",".join([i for i in rows[user_id].split(",") if i != str(film_id)]).replace("\n", "")
-      print(row)
     else:
       row = f"{film_id},{rows[user_id]}".replace("\n", "")
     like_db.replace_line(user_id, row)
@@ -407,8 +405,8 @@ def generate_film_suggestions(token, json=True):
            
 def console_interface():
   while True:
-    try:
-    #if True:
+    #try:
+    if True:
       n = input(">>>")
       split_n = n.split(" ")
       if split_n[0] == "clear":
@@ -432,7 +430,7 @@ def console_interface():
         print(hash(split_n[1]))
         
       elif split_n[0] == "register":
-        print(register(split_n[1],split_n[2], split_n[3], split_n[4], json=False))
+        print(register(split_n[1],split_n[2], split_n[3], split_n[4], json=False, email=split_n[5]))
         
       elif split_n[0] == "verify":
         print(update_token(split_n[1], split_n[2]))
@@ -465,9 +463,12 @@ def console_interface():
 
       elif split_n[0] == "generate":
         print(generate_film_suggestions(split_n[1]))
+
+      elif split_n[0] == "resetmail":
+        password_reset(split_n[1])
         
-    except Exception:
-      print('incorrect arguments')
+    #except Exception as E:
+    #  print('incorrect arguments')
 
 # main program
 
